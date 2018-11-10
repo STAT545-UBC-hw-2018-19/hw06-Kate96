@@ -1,0 +1,253 @@
+---
+title: "HW06 - Data Wrangling Wrap Up" 
+author: "Kate Tyshchenko (Kate96)" 
+date: "November 9th 2018" 
+output: 
+  html_document:
+  toc: yes
+---
+
+```{r}
+suppressPackageStartupMessages(library("tidyverse"))
+library("repurrrsive")
+library("stringr")
+library("gapminder")
+```
+
+The topics picked - 1 and 3.
+
+### 1. Character data
+##### Read and work the exercises in the Strings chapter
+
+In this section, I will work with exercises on strings which are sequences of characters (can be any length); they are surrounded by double quotes in R.
+
+I picked the exercises from different sections.
+
+####### 14.3.1.1 Exercises
+1). Explain why each of these strings don’t match a `\`: `"\"`, `"\\"`, `"\\\"`.
+
+`"\"` uses a special behaviour of the backslash ie escaping, so it will not match to a string `"\"`. 
+
+`"\\"` will also not match because while it escapes the special behaviour of the backslash, the additional `\` will be used as an escape in the string.
+
+And finally, the third option will not match because there are two backslashes when we make a string `\` (ie `backslash <- "\\"` to escape special behaviour there as well). Hence, we need to escape that backslash by adding a fourth `\`.
+
+2). How would you match the sequence `"'\`?
+
+```{r}
+special <- c("\"\'\\") #one backslash for each of the quotes and backslash to escape the special behaviour
+writeLines(special)
+str_view(special, "\\\"\\\'\\\\")
+```
+To match `special` we need to add two additional backslashes to the one that we already have when we made the string. That is because we need to escape the special behaviour of that backslash in the regular expression, and then to escape in the string.
+
+3). What patterns will the regular expression `\..\..\..` match? How would you represent it as a string?
+
+```{r}
+regex1 <- c("\\..\\..\\..") #to represent as a string; we don't need to escape . here, because there is no special behaviour, while we need to escape \
+writeLines(regex1)
+patterns <- c("a.b.c.d", "a.b.c", "a...c.*", "a.zvx.4")
+str_view(patterns, "\\..\\..\\..") #ie will match .(any character).(any character).(any character) 
+```
+
+In line 50, will also need to add an additional backslash in front of the backslash present so it doesn't escape and break the string.
+
+####### 14.3.2.1 Exercises
+1). How would you match the literal string `"$^$"`?
+
+```{r}
+str_view(c("apple", "banana", "$^$", "apple$^$"), "^\\$\\^\\$$")
+```
+
+To match `"$^$"`, we need this: `"^\\$\\^\\$$"`. The first backslash is to escape `$` (as it is a special character). The second backslash is because we need to use a string, so that is another escape. It is similar for the rest of the expression, ie characters `^` and `$`. 
+
+`^` in the beginning is needed to show that it matches from the beginning, while the last `$` is to show that it should match till the very end of the string. That is why the last string in the vector is not matched, even though it contains `$^$`.
+
+2). Given the corpus of common words in stringr::words, create regular expressions that find all words that:
+
+I. Start with “y”.
+II. End with “x”
+III. Are exactly three letters long. (Don’t cheat by using str_length()!) and end with x or t (so that the list is shorter)
+IV. Have seven letters or more, and start with a (so that the list is shorter)
+Since this list is long, you might want to use the match argument to str_view() to show only the matching or non-matching words.
+
+```{r}
+str_view(stringr::words, "^y", match = TRUE)
+str_view(stringr::words, "x$", match = TRUE)
+str_view(stringr::words, "^..[xt]$", match = TRUE)
+str_view(stringr::words, "^a......", match = TRUE)
+```
+
+##### 14.4.2 Exercises (modified - to use in gapminder dataset)
+For each of the following challenges, try solving it by using both a single regular expression, and a combination of multiple str_detect() calls.
+
+1). Find all countries that start and end with a.
+
+```{r}
+countries <- levels(gapminder$country)
+
+#Method 1:
+str_view(countries, "^A.+a$", match = TRUE)
+
+#Method 2:
+str_subset(countries, "^A") %>% 
+  str_subset("a$")
+```
+
+
+2). Find all countries that start with a vowel and end with a consonant.
+
+```{r}
+#Method 1:
+str_view(countries, "^[aoieuAOIEU].+[^aoieu]$", match = TRUE)
+
+#Method 2:
+str_subset(countries, "^[aoieuAOIEU]") %>% 
+  str_subset("[^aoieu]$")
+```
+
+
+3). Are there any words that contain at least one of each different vowel?
+
+```{r}
+#Method 1:
+countries %>% 
+  str_to_lower() %>% 
+  str_view(".*([aoieu]).*([aoieu][^\\1]).*([aoieu][^\\1\\2]).*([aoieu][^\\1\\2\\3]).*([aoieu][^\\1\\2\\3\\4]).*", match = TRUE)
+
+```
+
+This doesn't actually give the intended result... but I couldn't really figure out how to write regex for this exercise. str_subset() is much easier for this purpose.
+
+```{r}
+#Method 2:
+countries %>% str_subset("[Aa].") %>% 
+  str_subset("[Ee].") %>% 
+  str_subset("[Oo].") %>% 
+  str_subset("[Uu].") %>% 
+  str_subset("[Ii].")
+
+```
+
+
+4). What country has the highest number of vowels? What country has the highest proportion of vowels? (Hint: what is the denominator?)
+
+```{r}
+#Highest number of vowels starting from the data frame itself:
+gapminder %>%
+  mutate(
+    num_vowels = str_count(country, "[aoieu]")) %>% 
+  filter(num_vowels == max(num_vowels)) %>% 
+  .$country %>% as.character() %>% unique()
+
+#Highest proportion of vowels:
+gapminder %>% 
+  mutate(
+    num_vowels = str_count(country, "[aoieu]"),
+    vowel_proportion = num_vowels/str_length(country)) %>% 
+  filter(vowel_proportion == max(vowel_proportion)) %>% 
+  .$country %>% as.character() %>% unique() 
+```
+Bosnia and Herzegovina and Equitorial Guinea have the highest vowel number (9 vowels in each), while Guinea has the highest proprotion of vowels (4 vowels in a 6-letter word).
+
+Additional exercise I came up with for gapminder data to practice replacement and extraction of strings in a tibble:
+Make a plot for Canada, where average life Expectancy is compared in 19th vs 20th century.
+
+```{r canada_lifeexp_plot}
+gapminder %>% 
+  filter(country == "Canada") %>% 
+  select(year, lifeExp) %>% 
+  tidyr::extract(year, c("century"), "(19|20)", remove = FALSE) %>% 
+  mutate(
+    century = str_replace_all(century, c("19" = "19th", "20" = "20th"))) %>% 
+  group_by(century) %>% 
+  summarize(avg_life_exp = mean(lifeExp)) %>% 
+  ggplot(aes(century, avg_life_exp)) +
+  geom_bar(stat = "identity", fill = "brown3") +
+  theme_light() +
+  xlab("Century") +
+  ylab("Average life expectancy (years)") +
+  ggtitle("Comparison of average life expectancy in 19th vs 20th century in Canada") +
+  geom_text(aes(label=round(avg_life_exp, 0)), position=position_dodge(width=0.9), vjust=-0.25) #add labels over each bar
+```
+
+We can see that the average life expectancy in Canada increased in 20th century as expected.
+
+### 3. Work with the candy data
+##### Compare the joy/despair values of different types of candy (Cadbury Creme eggs vs Licorice)
+
+1). Import and explore the initial data frame:
+
+```{r}
+candy <- read_csv("https://raw.githubusercontent.com/jennybc/candy/master/data-raw/CANDY-HIERARCHY-2015%20SURVEY-Responses.csv")
+head(candy, 3)
+dim(candy)
+knitr::kable(candy[1:10, 1:10])
+```
+
+The candy data frame consists of 5658 rows (ie different people that participated in the survey) and 124 columns (include various kinds of candy, as well as some information about the participant).
+
+We can already see a weird data point where the age of a participant is 9e+22?
+
+Additionally, we can see that even the age column is a character.
+
+2). Wrangle the data frame (rename columns, take kids/young adults that are 20 years old or younger who are going trick or treating and only keep Cadbury eggs and Licorice candy:
+
+- rename columns that will be used:
+
+```{r}
+candy_renamed <- candy %>%
+  rename(Age = str_subset(colnames(.), ".old."),
+         Trick_or_treat = str_subset(colnames(.), ".trick."),
+         Cadbury_Creme_Eggs = str_subset(colnames(.), ".Cadbury."),
+         Licorice = '[Licorice]')
+
+knitr::kable(candy_renamed[1:10, 1:10])
+```
+
+- take only the columns needed:
+
+```{r}
+candy_filt <- candy_renamed %>%
+  select(c(Age, Trick_or_treat, Cadbury_Creme_Eggs, Licorice))
+
+knitr::kable(candy_filt[1:10, ])
+```
+
+- filter the data by age and trick or treat status:
+
+```{r}
+candy_filt <- candy_filt  %>% 
+  mutate_at(1, as.numeric) %>% #make Age column numeric for further filtering 
+  filter(Age <= 20,
+         Trick_or_treat == "Yes")
+
+knitr::kable(candy_filt[1:10, ])
+
+```
+
+3). Tidy the data:
+
+```{r}
+candy_tidy <- candy_filt %>% 
+  gather(key = "Candy", value = "Mood", Cadbury_Creme_Eggs, Licorice) 
+head(candy_tidy)
+str(candy_tidy)
+
+knitr::kable(candy_tidy[1:10, ])
+```
+
+4). Plot:
+
+```{r candy_pref_plot}
+candy_tidy %>% 
+  ggplot(aes(Candy, fill = Mood)) +
+  geom_bar(position=position_dodge()) +
+  geom_text(stat="count", 
+            aes(label=..count.., group = Mood), 
+            position = position_dodge(width=0.9), vjust = -0.25, size = 4) + 
+  ggtitle("Response comparison for candy on Halloween 2015") +
+  theme_light()
+```
+
+Most people up till 20 yrs old prefer Cadbury Creme Eggs (joy reaction), while the majority does not like licorice (despair reaction).
