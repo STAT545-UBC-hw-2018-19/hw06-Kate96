@@ -1,6 +1,6 @@
 # HW06 repository
 
-This is the repository for the ***1st homework assignment*** for UBC STAT547M course (2018W).
+This is the repository for the ***6th homework assignment*** for UBC STAT545/547M course (2018W).
 - Completed by *Kate Tyshchenko (Kate96)*
 
 #### This repo contains:
