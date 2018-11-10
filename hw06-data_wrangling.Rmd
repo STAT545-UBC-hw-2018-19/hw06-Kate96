@@ -3,8 +3,7 @@ title: "HW06 - Data Wrangling Wrap Up"
 author: "Kate Tyshchenko (Kate96)" 
 date: "November 9th 2018" 
 output: 
-  html_document:
-  toc: yes
+  html_document
 ---
 
 ```{r}
